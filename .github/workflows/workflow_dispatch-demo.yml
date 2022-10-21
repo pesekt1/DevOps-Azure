@@ -1,14 +1,15 @@
 name: Workflow dispatch demo
-on: workflow_dispatch:
-  inputs:
-    name: 
-      description: "Enter the name"
-      required: true
-      default: "Github user"
-    deploy:
-      description: "Deploy code after build (yes/no)"
-      required: false
-      default: "yes"
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "Enter the name"
+        required: true
+        default: "Github user"
+      deploy:
+        description: "Deploy code after build (yes/no)"
+        required: false
+        default: "yes"
 jobs:
   Example-Actions-Job:
     name: Exploring GitHub Actions
