@@ -14,14 +14,14 @@ jobs:
   build:
     env:
       BUILD_CONFIG: Release
-      DOT_NET_VERSION: 5.0.x
+      DOT_NET_VERSION: 10.0.x
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOT_NET_VERSION }}
 
