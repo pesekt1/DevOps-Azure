@@ -1,0 +1,101 @@
+name: Complex Pipeline Demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+env:
+  APP_NAME: demo-app
+
+jobs:
+  # Stage 1: runs first
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - id: ver
+        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+      - run: echo "Preparing build ${{ steps.ver.outputs.version }}"
+
+  # Stage 2: three jobs run in parallel after setup
+  lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Linting..." && sleep 5
+
+  unit-tests:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 22]
+    name: unit-tests (${{ matrix.os }}, node ${{ matrix.node }})
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --version
+        shell: bash
+      - run: echo "Running tests on ${{ matrix.os }}" && sleep 5
+        shell: bash
+
+  build:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir dist
+          echo "build ${{ needs.setup.outputs.version }}" > dist/build.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+  # Stage 3: waits for ALL parallel jobs
+  integration-tests:
+    needs: [lint, unit-tests, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+      - run: cat dist/build.txt
+      - run: echo "Integration tests..." && sleep 5
+
+  # Stage 4: two deployments in parallel
+  deploy-staging:
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - run: echo "Deploying ${{ needs.setup.outputs.version }} to staging"
+
+  security-scan:
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Security scanning..." && sleep 5
+
+  # Stage 5: only on master, after both Stage 4 jobs
+  deploy-production:
+    needs: [deploy-staging, security-scan]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Deploying to production"
+
+  # Always runs, reports overall result
+  notify:
+    needs: [deploy-production]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Pipeline finished. Result - ${{ needs.deploy-production.result }}"
