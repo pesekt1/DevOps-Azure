@@ -1,4 +1,4 @@
-name: Matrix Testing
+name: Matrix Testing - Exclusions
 
 on:
   workflow_dispatch:
